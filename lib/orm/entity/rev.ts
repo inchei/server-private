@@ -28,6 +28,8 @@ export const RevType = {
   episodeLock: 183,
   episodeUnlock: 184,
   episodeErase: 185,
+
+  subjectRelation: 17,
 } as const;
 
 // const TypeSubjectCharacterRelation = 5; // 条目->角色关联
@@ -182,6 +184,29 @@ export interface PersonRev {
   extra: {
     img?: string;
   };
+}
+
+export interface SubjectRelationRev {
+  self: Record<
+    string,
+    {
+      subject_id: string;
+      subject_type_id: string;
+      relation_type: string;
+      relation_order: string;
+      related_subject_id: string;
+      related_subject_type_id: string;
+    }
+  >;
+  // remote: [
+  //   {
+  //     subject_id: string;
+  //     subject_type_id: string;
+  //     relation_type: string;
+  //     related_subject_id: string;
+  //     related_subject_type_id: string;
+  //   }
+  // ]
 }
 
 export async function createRevision(

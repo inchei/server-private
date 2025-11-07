@@ -12,6 +12,7 @@ import { BadRequestError, LockedError, NotFoundError } from '@app/lib/error.ts';
 import { Security, Tag } from '@app/lib/openapi/index.ts';
 import * as entity from '@app/lib/orm/entity';
 import { RevType } from '@app/lib/orm/entity';
+import type { SubjectRelationRev } from '@app/lib/orm/entity/index.ts';
 import { AppDataSource } from '@app/lib/orm/index.ts';
 import * as orm from '@app/lib/orm/index.ts';
 import { pushRev } from '@app/lib/rev/ep.ts';
@@ -22,6 +23,7 @@ import * as fetcher from '@app/lib/types/fetcher.ts';
 import * as req from '@app/lib/types/req.ts';
 import * as res from '@app/lib/types/res.ts';
 import { formatErrors } from '@app/lib/types/res.ts';
+import { ghostUser } from '@app/lib/user/utils.ts';
 import { validateDate } from '@app/lib/utils/date.ts';
 import { validateDuration } from '@app/lib/utils/index.ts';
 import { matchExpected } from '@app/lib/wiki';
@@ -173,6 +175,33 @@ export const EpsisodesEdit = t.Object(
   { $id: 'EpsisodesEdit' },
 );
 
+type IRelationHistorySummary = Static<typeof RelationHistorySummary>;
+export const RelationHistorySummary = t.Object(
+  {
+    id: t.Integer(),
+    creator: t.Object({
+      username: t.String(),
+    }),
+    commitMessage: t.String(),
+    createdAt: t.Integer({ description: 'unix timestamp seconds' }),
+  },
+  { $id: 'RelationHistorySummary' },
+);
+
+type IRelationRevisionWikiInfo = Static<typeof RelationRevisionWikiInfo>;
+export const RelationRevisionWikiInfo = t.Array(
+  t.Object({
+    subjectName: t.String(),
+    subjectId: t.Integer(),
+    subjectType: res.Ref(res.SubjectType),
+    relationType: t.Integer(),
+    relationOrder: t.Integer(),
+  }),
+  {
+    $id: 'RelationRevisionWikiInfo',
+  },
+);
+
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function setup(app: App) {
   imageRoutes.setup(app);
@@ -180,6 +209,8 @@ export async function setup(app: App) {
   app.addSchema(SubjectEdit);
   app.addSchema(Platform);
   app.addSchema(SubjectWikiInfo);
+  app.addSchema(RelationHistorySummary);
+  app.addSchema(RelationRevisionWikiInfo);
 
   app.get(
     '/subjects/:subjectID',
@@ -910,6 +941,137 @@ export async function setup(app: App) {
           comment: commitMessage,
         });
       });
+    },
+  );
+
+  app.get(
+    '/subjects/:subjectID/relations/history-summary',
+    {
+      schema: {
+        tags: [Tag.Wiki],
+        operationId: 'subjectRelationHistorySummary',
+        summary: '获取条目关联历史编辑摘要',
+        params: t.Object({
+          subjectID: t.Integer({ minimum: 1 }),
+        }),
+        querystring: t.Object({
+          limit: t.Optional(
+            t.Integer({ default: 20, minimum: 1, maximum: 100, description: 'max 100' }),
+          ),
+          offset: t.Optional(t.Integer({ default: 0, minimum: 0, description: 'min 0' })),
+        }),
+        security: [{ [Security.CookiesSession]: [], [Security.HTTPBearer]: [] }],
+        response: {
+          200: res.Paged(res.Ref(RelationHistorySummary)),
+        },
+      },
+    },
+    async ({ params: { subjectID }, query: { limit = 20, offset = 0 } }) => {
+      const [{ count = 0 } = {}] = await db
+        .select({ count: op.countDistinct(schema.chiiRevHistory.revId) })
+        .from(schema.chiiRevHistory)
+        .where(
+          op.and(
+            op.eq(schema.chiiRevHistory.revMid, subjectID),
+            op.inArray(schema.chiiRevHistory.revType, [RevType.subjectRelation]),
+          ),
+        );
+
+      const history = await db
+        .select()
+        .from(schema.chiiRevHistory)
+        .where(
+          op.and(
+            op.eq(schema.chiiRevHistory.revMid, subjectID),
+            op.inArray(schema.chiiRevHistory.revType, [RevType.subjectRelation]),
+          ),
+        )
+        .orderBy(op.desc(schema.chiiRevHistory.revId))
+        .offset(offset)
+        .limit(limit);
+
+      const users = await fetcher.fetchSlimUsersByIDs(history.map((x) => x.revCreator));
+
+      const revisions = history.map((x) => {
+        return {
+          id: x.revId,
+          creator: {
+            username: users[x.revCreator]?.username ?? ghostUser(x.revCreator).username,
+          },
+          createdAt: x.createdAt,
+          commitMessage: x.revEditSummary,
+        } satisfies IRelationHistorySummary;
+      });
+
+      return {
+        total: count,
+        data: revisions,
+      };
+    },
+  );
+
+  app.get(
+    '/subjects/relations/revisions/:revisionID',
+    {
+      schema: {
+        tags: [Tag.Wiki],
+        operationId: 'getRelationRevisionInfo',
+        summary: '获取条目历史版本关联 wiki 信息',
+        params: t.Object({
+          revisionID: t.Integer({ minimum: 1 }),
+        }),
+        security: [{ [Security.CookiesSession]: [], [Security.HTTPBearer]: [] }],
+        response: {
+          200: res.Ref(RelationRevisionWikiInfo),
+          404: res.Ref(res.Error, {
+            'x-examples': formatErrors(new NotFoundError('revision')),
+          }),
+        },
+      },
+    },
+    async ({ params: { revisionID } }): Promise<IRelationRevisionWikiInfo> => {
+      const [r] = await db
+        .select()
+        .from(schema.chiiRevHistory)
+        .where(op.eq(schema.chiiRevHistory.revId, revisionID))
+        .limit(1);
+      if (!r) {
+        throw new NotFoundError(`revision ${revisionID}`);
+      }
+
+      const [revText] = await db
+        .select()
+        .from(schema.chiiRevText)
+        .where(op.eq(schema.chiiRevText.revTextId, r.revTextId));
+      if (!revText) {
+        throw new NotFoundError(`RevText ${r.revTextId}`);
+      }
+
+      const revRecord = await entity.RevText.deserialize(revText.revText);
+      const revContent = revRecord[revisionID] as SubjectRelationRev;
+
+      const subjects = await fetcher.fetchSlimSubjectsByIDs(
+        Object.values(revContent.self).map(({ related_subject_id: id }) => +id),
+      );
+
+      const relatedData = Object.values(revContent.self).map(
+        ({
+          relation_type: relationType,
+          relation_order: relationOrder,
+          related_subject_id: subjectId,
+          related_subject_type_id: subjectType,
+        }) => {
+          return {
+            relationType: +relationType,
+            relationOrder: +relationOrder,
+            subjectId: +subjectId,
+            subjectType: +subjectType,
+            subjectName: subjects[+subjectId]?.name || '',
+          };
+        },
+      );
+
+      return relatedData;
     },
   );
 }

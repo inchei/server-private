@@ -1413,6 +1413,49 @@ exports[`should build private api spec 1`] = `
         - subject
         - persons
       type: object
+    RelationHistorySummary:
+      properties:
+        commitMessage:
+          type: string
+        createdAt:
+          description: unix timestamp seconds
+          type: integer
+        creator:
+          properties:
+            username:
+              type: string
+          required:
+            - username
+          type: object
+        id:
+          type: integer
+      required:
+        - id
+        - creator
+        - commitMessage
+        - createdAt
+      type: object
+    RelationRevisionWikiInfo:
+      items:
+        properties:
+          relationOrder:
+            type: integer
+          relationType:
+            type: integer
+          subjectId:
+            type: integer
+          subjectName:
+            type: string
+          subjectType:
+            $ref: '#/components/schemas/SubjectType'
+        required:
+          - subjectName
+          - subjectId
+          - subjectType
+          - relationType
+          - relationOrder
+        type: object
+      type: array
     Reply:
       allOf:
         - $ref: '#/components/schemas/ReplyBase'
@@ -9565,6 +9608,41 @@ paths:
           HTTPBearer: []
       tags:
         - wiki
+  /p1/wiki/subjects/relations/revisions/{revisionID}:
+    get:
+      operationId: getRelationRevisionInfo
+      parameters:
+        - in: path
+          name: revisionID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelationRevisionWikiInfo'
+          description: Default Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: default error response type
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取条目历史版本关联 wiki 信息
+      tags:
+        - wiki
   /p1/wiki/subjects/revisions/{revisionID}:
     get:
       operationId: getSubjectRevisionInfo
@@ -10284,6 +10362,63 @@ paths:
         - CookiesSession: []
           HTTPBearer: []
       summary: 获取条目 wiki 历史编辑摘要
+      tags:
+        - wiki
+  /p1/wiki/subjects/{subjectID}/relations/history-summary:
+    get:
+      operationId: subjectRelationHistorySummary
+      parameters:
+        - description: max 100
+          in: query
+          name: limit
+          required: false
+          schema:
+            default: 20
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: min 0
+          in: query
+          name: offset
+          required: false
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+        - in: path
+          name: subjectID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    items:
+                      $ref: '#/components/schemas/RelationHistorySummary'
+                    type: array
+                  total:
+                    description: limit+offset 为参数的请求表示总条数，page 为参数的请求表示总页数
+                    type: integer
+                required:
+                  - data
+                  - total
+                type: object
+          description: Default Response
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取条目关联历史编辑摘要
       tags:
         - wiki
   /p1/wiki/unlock/subjects:
