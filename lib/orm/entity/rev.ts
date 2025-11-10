@@ -30,6 +30,14 @@ export const RevType = {
   episodeErase: 185,
 
   subjectRelation: 17,
+  subjectCastRelation: 6,
+  subjectPersonRelation: 10,
+
+  characterSubjectRelation: 4,
+  characterCastRelation: 7,
+
+  personCastRelation: 8,
+  personSubjectRelation: 9,
 } as const;
 
 // const TypeSubjectCharacterRelation = 5; // 条目->角色关联
@@ -208,6 +216,44 @@ export interface SubjectRelationRev {
   //   }
   // ]
 }
+
+export type PersonSubjectRev = Record<
+  number,
+  {
+    subject_id: string;
+    position: string;
+    prsn_id: number;
+  }
+>;
+
+export type PersonCharacterRev = Record<
+  number,
+  {
+    subject_id: string;
+    crt_id: string;
+    // summary: string | null;
+  }
+>;
+
+export type CharacterSubjectRev = Record<
+  number,
+  {
+    subject_id: string;
+    crt_type: string;
+    // crt_id: number;
+    // crt_order: number;
+  }
+>;
+
+export type CharacterPersonRev = Record<
+  number,
+  {
+    subject_id: string;
+    prsn_id: string;
+    // crt_id: number;
+    // summary: string | null;
+  }
+>;
 
 export async function createRevision(
   t: EntityManager,

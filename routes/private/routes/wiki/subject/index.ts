@@ -16,6 +16,7 @@ import type { SubjectRelationRev } from '@app/lib/orm/entity/index.ts';
 import { AppDataSource } from '@app/lib/orm/index.ts';
 import * as orm from '@app/lib/orm/index.ts';
 import { pushRev } from '@app/lib/rev/ep.ts';
+import { createRelationHistoryRoute, RelationHistorySummary } from '@app/lib/rev/index.ts';
 import * as Subject from '@app/lib/subject/index.ts';
 import { InvalidWikiSyntaxError } from '@app/lib/subject/index.ts';
 import { SubjectType, SubjectTypeValues } from '@app/lib/subject/type.ts';
@@ -23,7 +24,6 @@ import * as fetcher from '@app/lib/types/fetcher.ts';
 import * as req from '@app/lib/types/req.ts';
 import * as res from '@app/lib/types/res.ts';
 import { formatErrors } from '@app/lib/types/res.ts';
-import { ghostUser } from '@app/lib/user/utils.ts';
 import { validateDate } from '@app/lib/utils/date.ts';
 import { validateDuration } from '@app/lib/utils/index.ts';
 import { matchExpected } from '@app/lib/wiki';
@@ -173,19 +173,6 @@ export const EpsisodesEdit = t.Object(
     expectedRevision: t.Optional(t.Array(req.EpisodeExpected)),
   },
   { $id: 'EpsisodesEdit' },
-);
-
-type IRelationHistorySummary = Static<typeof RelationHistorySummary>;
-export const RelationHistorySummary = t.Object(
-  {
-    id: t.Integer(),
-    creator: t.Object({
-      username: t.String(),
-    }),
-    commitMessage: t.String(),
-    createdAt: t.Integer({ description: 'unix timestamp seconds' }),
-  },
-  { $id: 'RelationHistorySummary' },
 );
 
 type IRelationRevisionWikiInfo = Static<typeof RelationRevisionWikiInfo>;
@@ -944,70 +931,18 @@ export async function setup(app: App) {
     },
   );
 
+  const subjectRelationHistorySummary = createRelationHistoryRoute(
+    'subjectRelationHistorySummary',
+    '获取条目-条目关联历史编辑摘要',
+    'subjectID',
+    [RevType.subjectRelation],
+  );
   app.get(
     '/subjects/:subjectID/relations/history-summary',
     {
-      schema: {
-        tags: [Tag.Wiki],
-        operationId: 'subjectRelationHistorySummary',
-        summary: '获取条目关联历史编辑摘要',
-        params: t.Object({
-          subjectID: t.Integer({ minimum: 1 }),
-        }),
-        querystring: t.Object({
-          limit: t.Optional(
-            t.Integer({ default: 20, minimum: 1, maximum: 100, description: 'max 100' }),
-          ),
-          offset: t.Optional(t.Integer({ default: 0, minimum: 0, description: 'min 0' })),
-        }),
-        security: [{ [Security.CookiesSession]: [], [Security.HTTPBearer]: [] }],
-        response: {
-          200: res.Paged(res.Ref(RelationHistorySummary)),
-        },
-      },
+      schema: subjectRelationHistorySummary.schema,
     },
-    async ({ params: { subjectID }, query: { limit = 20, offset = 0 } }) => {
-      const [{ count = 0 } = {}] = await db
-        .select({ count: op.countDistinct(schema.chiiRevHistory.revId) })
-        .from(schema.chiiRevHistory)
-        .where(
-          op.and(
-            op.eq(schema.chiiRevHistory.revMid, subjectID),
-            op.inArray(schema.chiiRevHistory.revType, [RevType.subjectRelation]),
-          ),
-        );
-
-      const history = await db
-        .select()
-        .from(schema.chiiRevHistory)
-        .where(
-          op.and(
-            op.eq(schema.chiiRevHistory.revMid, subjectID),
-            op.inArray(schema.chiiRevHistory.revType, [RevType.subjectRelation]),
-          ),
-        )
-        .orderBy(op.desc(schema.chiiRevHistory.revId))
-        .offset(offset)
-        .limit(limit);
-
-      const users = await fetcher.fetchSlimUsersByIDs(history.map((x) => x.revCreator));
-
-      const revisions = history.map((x) => {
-        return {
-          id: x.revId,
-          creator: {
-            username: users[x.revCreator]?.username ?? ghostUser(x.revCreator).username,
-          },
-          createdAt: x.createdAt,
-          commitMessage: x.revEditSummary,
-        } satisfies IRelationHistorySummary;
-      });
-
-      return {
-        total: count,
-        data: revisions,
-      };
-    },
+    subjectRelationHistorySummary.handler,
   );
 
   app.get(
@@ -1016,7 +951,7 @@ export async function setup(app: App) {
       schema: {
         tags: [Tag.Wiki],
         operationId: 'getRelationRevisionInfo',
-        summary: '获取条目历史版本关联 wiki 信息',
+        summary: '获取条目-条目关联历史版本 wiki 信息',
         params: t.Object({
           revisionID: t.Integer({ minimum: 1 }),
         }),
@@ -1073,5 +1008,33 @@ export async function setup(app: App) {
 
       return relatedData;
     },
+  );
+
+  const subjectPersonHistorySummary = createRelationHistoryRoute(
+    'subjectPersonHistorySummary',
+    '获取条目-人物关联历史编辑摘要',
+    'subjectID',
+    [RevType.subjectPersonRelation],
+  );
+  app.get(
+    '/subjects/:subjectID/persons/history-summary',
+    {
+      schema: subjectPersonHistorySummary.schema,
+    },
+    subjectPersonHistorySummary.handler,
+  );
+
+  const subjectCastHistorySummary = createRelationHistoryRoute(
+    'subjectCastHistorySummary',
+    '获取条目-声优关联历史编辑摘要',
+    'subjectID',
+    [RevType.subjectCastRelation],
+  );
+  app.get(
+    '/subjects/:subjectID/cast/history-summary',
+    {
+      schema: subjectCastHistorySummary.schema,
+    },
+    subjectCastHistorySummary.handler,
   );
 }
