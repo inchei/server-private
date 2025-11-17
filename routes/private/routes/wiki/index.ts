@@ -14,7 +14,6 @@ import * as subject from './subject/index.ts';
 
 export async function setup(app: App) {
   await app.register(subject.setup);
-  await app.register(character.setup);
   await app.register(person.setup);
   await app.register(character.setup);
   await app.register(ep.setup);

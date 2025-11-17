@@ -82,6 +82,7 @@ function addResponseSchemas(app: App) {
   app.addSchema(res.Post);
   app.addSchema(res.Profile);
   app.addSchema(res.Reaction);
+  app.addSchema(res.RelationHistory);
   app.addSchema(res.Reply);
   app.addSchema(res.ReplyBase);
   app.addSchema(res.RevisionHistory);

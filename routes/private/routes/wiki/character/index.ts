@@ -12,8 +12,7 @@ import type {
 } from '@app/lib/orm/entity/index.ts';
 import { RevType } from '@app/lib/orm/entity/index.ts';
 import * as entity from '@app/lib/orm/entity/index.ts';
-import { createRelationHistoryRoute, RelationHistorySummary } from '@app/lib/rev/index.ts';
-import { InvalidWikiSyntaxError } from '@app/lib/subject/index.ts';
+import { createRelationHistoryRoute } from '@app/lib/rev/index.ts';
 import * as fetcher from '@app/lib/types/fetcher.ts';
 import * as res from '@app/lib/types/res.ts';
 import { formatErrors } from '@app/lib/types/res.ts';
@@ -102,7 +101,6 @@ export async function setup(app: App) {
   app.addSchema(CharacterWikiInfo);
   app.addSchema(CharacterRevisionWikiInfo);
   app.addSchema(UserCharacterContribution);
-  app.addSchema(RelationHistorySummary);
   app.addSchema(CharacterSubjectRelationWiki);
   app.addSchema(CharacterPersonRelationWiki);
 
@@ -119,9 +117,6 @@ export async function setup(app: App) {
         security: [{ [Security.CookiesSession]: [], [Security.HTTPBearer]: [] }],
         response: {
           200: res.Ref(CharacterWikiInfo),
-          401: res.Ref(res.Error, {
-            'x-examples': formatErrors(new InvalidWikiSyntaxError()),
-          }),
           404: res.Ref(res.Error, {
             'x-examples': formatErrors(new NotFoundError('character')),
           }),
@@ -355,7 +350,7 @@ export async function setup(app: App) {
   );
 
   app.get(
-    '/characters/subjects/revisions/:revisionID',
+    '/characters/-/subjects/revisions/:revisionID',
     {
       schema: {
         tags: [Tag.Wiki],
@@ -428,7 +423,7 @@ export async function setup(app: App) {
   );
 
   app.get(
-    '/characters/persons/revisions/:revisionID',
+    '/characters/-/persons/revisions/:revisionID',
     {
       schema: {
         tags: [Tag.Wiki],

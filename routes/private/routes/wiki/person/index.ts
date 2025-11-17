@@ -10,7 +10,7 @@ import type { PersonCharacterRev, PersonSubjectRev } from '@app/lib/orm/entity/i
 import { createRevision, RevType } from '@app/lib/orm/entity/index.ts';
 import * as entity from '@app/lib/orm/entity/index.ts';
 import { AppDataSource, PersonRepo } from '@app/lib/orm/index.ts';
-import { createRelationHistoryRoute, RelationHistorySummary } from '@app/lib/rev/index.ts';
+import { createRelationHistoryRoute } from '@app/lib/rev/index.ts';
 import { InvalidWikiSyntaxError } from '@app/lib/subject/index.ts';
 import * as fetcher from '@app/lib/types/fetcher.ts';
 import * as res from '@app/lib/types/res.ts';
@@ -70,7 +70,6 @@ export const PersonCharacterRelationWiki = t.Array(
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function setup(app: App) {
   app.addSchema(PersonWikiInfo);
-  app.addSchema(RelationHistorySummary);
   app.addSchema(PersonSubjectRelationWiki);
   app.addSchema(PersonCharacterRelationWiki);
 
@@ -217,7 +216,7 @@ export async function setup(app: App) {
   );
 
   app.get(
-    '/persons/subjects/revisions/:revisionID',
+    '/persons/-/subjects/revisions/:revisionID',
     {
       schema: {
         tags: [Tag.Wiki],
@@ -288,7 +287,7 @@ export async function setup(app: App) {
   );
 
   app.get(
-    '/persons/characters/revisions/:revisionID',
+    '/persons/-/characters/revisions/:revisionID',
     {
       schema: {
         tags: [Tag.Wiki],

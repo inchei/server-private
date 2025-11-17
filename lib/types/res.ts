@@ -1184,3 +1184,16 @@ export const RevisionHistory = t.Object(
   },
   { $id: 'RevisionHistory' },
 );
+
+export type IRelationHistory = Static<typeof RelationHistory>;
+export const RelationHistory = t.Object(
+  {
+    id: t.Integer(),
+    creator: t.Object({
+      username: t.String(),
+    }),
+    commitMessage: t.String(),
+    createdAt: t.Integer({ description: 'unix timestamp seconds' }),
+  },
+  { $id: 'RelationHistory' },
+);

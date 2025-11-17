@@ -16,7 +16,7 @@ import type { SubjectRelationRev } from '@app/lib/orm/entity/index.ts';
 import { AppDataSource } from '@app/lib/orm/index.ts';
 import * as orm from '@app/lib/orm/index.ts';
 import { pushRev } from '@app/lib/rev/ep.ts';
-import { createRelationHistoryRoute, RelationHistorySummary } from '@app/lib/rev/index.ts';
+import { createRelationHistoryRoute } from '@app/lib/rev/index.ts';
 import * as Subject from '@app/lib/subject/index.ts';
 import { InvalidWikiSyntaxError } from '@app/lib/subject/index.ts';
 import { SubjectType, SubjectTypeValues } from '@app/lib/subject/type.ts';
@@ -196,7 +196,6 @@ export async function setup(app: App) {
   app.addSchema(SubjectEdit);
   app.addSchema(Platform);
   app.addSchema(SubjectWikiInfo);
-  app.addSchema(RelationHistorySummary);
   app.addSchema(RelationRevisionWikiInfo);
 
   app.get(
@@ -928,7 +927,7 @@ export async function setup(app: App) {
   );
 
   app.get(
-    '/subjects/relations/revisions/:revisionID',
+    '/subjects/-/relations/revisions/:revisionID',
     {
       schema: {
         tags: [Tag.Wiki],

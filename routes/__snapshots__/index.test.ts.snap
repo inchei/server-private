@@ -159,6 +159,24 @@ exports[`should build private api spec 1`] = `
         - nsfw
       title: Character
       type: object
+    CharacterPersonRelationWiki:
+      items:
+        properties:
+          personId:
+            type: integer
+          personName:
+            type: string
+          subjectId:
+            type: integer
+          subjectName:
+            type: string
+        required:
+          - subjectName
+          - subjectId
+          - personName
+          - personId
+        type: object
+      type: array
     CharacterRelation:
       properties:
         character:
@@ -223,6 +241,21 @@ exports[`should build private api spec 1`] = `
         - subject
         - type
       type: object
+    CharacterSubjectRelationWiki:
+      items:
+        properties:
+          characterType:
+            type: integer
+          subjectId:
+            type: integer
+          subjectName:
+            type: string
+        required:
+          - subjectName
+          - subjectId
+          - characterType
+        type: object
+      type: array
     CharacterWikiInfo:
       properties:
         id:
@@ -1231,6 +1264,24 @@ exports[`should build private api spec 1`] = `
         - character
         - relations
       type: object
+    PersonCharacterRelationWiki:
+      items:
+        properties:
+          characterId:
+            type: integer
+          characterName:
+            type: string
+          subjectId:
+            type: integer
+          subjectName:
+            type: string
+        required:
+          - subjectName
+          - subjectId
+          - characterName
+          - characterId
+        type: object
+      type: array
     PersonCollect:
       properties:
         createdAt:
@@ -1287,6 +1338,21 @@ exports[`should build private api spec 1`] = `
             type: string
           type: array
       type: object
+    PersonSubjectRelationWiki:
+      items:
+        properties:
+          position:
+            type: integer
+          subjectId:
+            type: integer
+          subjectName:
+            type: string
+        required:
+          - subjectName
+          - subjectId
+          - position
+        type: object
+      type: array
     PersonWikiInfo:
       properties:
         id:
@@ -1422,7 +1488,7 @@ exports[`should build private api spec 1`] = `
         - subject
         - persons
       type: object
-    RelationHistorySummary:
+    RelationHistory:
       properties:
         commitMessage:
           type: string
@@ -9451,6 +9517,41 @@ paths:
       summary: 获取用户时间胶囊
       tags:
         - user
+  /p1/wiki/characters/-/persons/revisions/{revisionID}:
+    get:
+      operationId: getCharacterPersonRevision
+      parameters:
+        - in: path
+          name: revisionID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterPersonRelationWiki'
+          description: Default Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: default error response type
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取角色-人物关联历史版本 wiki 信息
+      tags:
+        - wiki
   /p1/wiki/characters/-/revisions/{revisionID}:
     get:
       operationId: getCharacterRevisionInfo
@@ -9486,6 +9587,41 @@ paths:
       summary: 获取角色历史版本 wiki 信息
       tags:
         - wiki
+  /p1/wiki/characters/-/subjects/revisions/{revisionID}:
+    get:
+      operationId: getCharacterSubjectRevision
+      parameters:
+        - in: path
+          name: revisionID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterSubjectRelationWiki'
+          description: Default Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: default error response type
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取角色-条目关联历史版本 wiki 信息
+      tags:
+        - wiki
   /p1/wiki/characters/{characterID}:
     get:
       operationId: getCharacterWikiInfo
@@ -9503,12 +9639,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/CharacterWikiInfo'
           description: Default Response
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: default error response type
         '404':
           content:
             application/json:
@@ -9582,6 +9712,120 @@ paths:
         - CookiesSession: []
           HTTPBearer: []
       summary: 获取角色 wiki 历史编辑摘要
+      tags:
+        - wiki
+  /p1/wiki/characters/{characterID}/persons/history-summary:
+    get:
+      operationId: personCastHistorySummary
+      parameters:
+        - description: max 100
+          in: query
+          name: limit
+          required: false
+          schema:
+            default: 20
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: min 0
+          in: query
+          name: offset
+          required: false
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+        - in: path
+          name: characterID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    items:
+                      $ref: '#/components/schemas/RelationHistory'
+                    type: array
+                  total:
+                    description: limit+offset 为参数的请求表示总条数，page 为参数的请求表示总页数
+                    type: integer
+                required:
+                  - data
+                  - total
+                type: object
+          description: Default Response
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取角色-人物关联历史编辑摘要
+      tags:
+        - wiki
+  /p1/wiki/characters/{characterID}/subjects/history-summary:
+    get:
+      operationId: CharacterSubjectHistorySummary
+      parameters:
+        - description: max 100
+          in: query
+          name: limit
+          required: false
+          schema:
+            default: 20
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: min 0
+          in: query
+          name: offset
+          required: false
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+        - in: path
+          name: characterID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    items:
+                      $ref: '#/components/schemas/RelationHistory'
+                    type: array
+                  total:
+                    description: limit+offset 为参数的请求表示总条数，page 为参数的请求表示总页数
+                    type: integer
+                required:
+                  - data
+                  - total
+                type: object
+          description: Default Response
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取角色-条目关联历史编辑摘要
       tags:
         - wiki
   /p1/wiki/ep/{episodeID}:
@@ -9755,6 +9999,76 @@ paths:
           description: 意料之外的服务器错误
       tags:
         - wiki
+  /p1/wiki/persons/-/characters/revisions/{revisionID}:
+    get:
+      operationId: getPersonCharacterRevision
+      parameters:
+        - in: path
+          name: revisionID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonCharacterRelationWiki'
+          description: Default Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: default error response type
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取人物-角色关联历史版本 wiki 信息
+      tags:
+        - wiki
+  /p1/wiki/persons/-/subjects/revisions/{revisionID}:
+    get:
+      operationId: getPersonSubjectRevision
+      parameters:
+        - in: path
+          name: revisionID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonSubjectRelationWiki'
+          description: Default Response
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: default error response type
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取人物-条目关联历史版本 wiki 信息
+      tags:
+        - wiki
   /p1/wiki/persons/{personID}:
     get:
       description: 获取当前的 wiki 信息
@@ -9876,6 +10190,120 @@ paths:
           HTTPBearer: []
       tags:
         - wiki
+  /p1/wiki/persons/{personID}/characters/history-summary:
+    get:
+      operationId: personCharacterHistorySummary
+      parameters:
+        - description: max 100
+          in: query
+          name: limit
+          required: false
+          schema:
+            default: 20
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: min 0
+          in: query
+          name: offset
+          required: false
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+        - in: path
+          name: personID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    items:
+                      $ref: '#/components/schemas/RelationHistory'
+                    type: array
+                  total:
+                    description: limit+offset 为参数的请求表示总条数，page 为参数的请求表示总页数
+                    type: integer
+                required:
+                  - data
+                  - total
+                type: object
+          description: Default Response
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取人物-角色关联历史编辑摘要
+      tags:
+        - wiki
+  /p1/wiki/persons/{personID}/subjects/history-summary:
+    get:
+      operationId: personSubjectHistorySummary
+      parameters:
+        - description: max 100
+          in: query
+          name: limit
+          required: false
+          schema:
+            default: 20
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: min 0
+          in: query
+          name: offset
+          required: false
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+        - in: path
+          name: personID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    items:
+                      $ref: '#/components/schemas/RelationHistory'
+                    type: array
+                  total:
+                    description: limit+offset 为参数的请求表示总条数，page 为参数的请求表示总页数
+                    type: integer
+                required:
+                  - data
+                  - total
+                type: object
+          description: Default Response
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取人物-条目关联历史编辑摘要
+      tags:
+        - wiki
   /p1/wiki/recent:
     get:
       description: 获取最近两天的wiki更新
@@ -9986,8 +10414,7 @@ paths:
           HTTPBearer: []
       tags:
         - wiki
-<<<<<<< HEAD
-  /p1/wiki/subjects/relations/revisions/{revisionID}:
+  /p1/wiki/subjects/-/relations/revisions/{revisionID}:
     get:
       operationId: getRelationRevisionInfo
       parameters:
@@ -10019,13 +10446,10 @@ paths:
       security:
         - CookiesSession: []
           HTTPBearer: []
-      summary: 获取条目历史版本关联 wiki 信息
+      summary: 获取条目-条目关联历史版本 wiki 信息
       tags:
         - wiki
-  /p1/wiki/subjects/revisions/{revisionID}:
-=======
   /p1/wiki/subjects/-/revisions/{revisionID}:
->>>>>>> upstream/master
     get:
       operationId: getSubjectRevisionInfo
       parameters:
@@ -10334,6 +10758,63 @@ paths:
       security:
         - CookiesSession: []
           HTTPBearer: []
+      tags:
+        - wiki
+  /p1/wiki/subjects/{subjectID}/cast/history-summary:
+    get:
+      operationId: subjectCastHistorySummary
+      parameters:
+        - description: max 100
+          in: query
+          name: limit
+          required: false
+          schema:
+            default: 20
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: min 0
+          in: query
+          name: offset
+          required: false
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+        - in: path
+          name: subjectID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    items:
+                      $ref: '#/components/schemas/RelationHistory'
+                    type: array
+                  total:
+                    description: limit+offset 为参数的请求表示总条数，page 为参数的请求表示总页数
+                    type: integer
+                required:
+                  - data
+                  - total
+                type: object
+          description: Default Response
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取条目-声优关联历史编辑摘要
       tags:
         - wiki
   /p1/wiki/subjects/{subjectID}/covers:
@@ -10746,6 +11227,63 @@ paths:
       summary: 获取条目 wiki 历史编辑摘要
       tags:
         - wiki
+  /p1/wiki/subjects/{subjectID}/persons/history-summary:
+    get:
+      operationId: subjectPersonHistorySummary
+      parameters:
+        - description: max 100
+          in: query
+          name: limit
+          required: false
+          schema:
+            default: 20
+            maximum: 100
+            minimum: 1
+            type: integer
+        - description: min 0
+          in: query
+          name: offset
+          required: false
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+        - in: path
+          name: subjectID
+          required: true
+          schema:
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    items:
+                      $ref: '#/components/schemas/RelationHistory'
+                    type: array
+                  total:
+                    description: limit+offset 为参数的请求表示总条数，page 为参数的请求表示总页数
+                    type: integer
+                required:
+                  - data
+                  - total
+                type: object
+          description: Default Response
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: 意料之外的服务器错误
+      security:
+        - CookiesSession: []
+          HTTPBearer: []
+      summary: 获取条目-人物关联历史编辑摘要
+      tags:
+        - wiki
   /p1/wiki/subjects/{subjectID}/relations/history-summary:
     get:
       operationId: subjectRelationHistorySummary
@@ -10781,7 +11319,7 @@ paths:
                 properties:
                   data:
                     items:
-                      $ref: '#/components/schemas/RelationHistorySummary'
+                      $ref: '#/components/schemas/RelationHistory'
                     type: array
                   total:
                     description: limit+offset 为参数的请求表示总条数，page 为参数的请求表示总页数
@@ -10800,7 +11338,7 @@ paths:
       security:
         - CookiesSession: []
           HTTPBearer: []
-      summary: 获取条目关联历史编辑摘要
+      summary: 获取条目-条目关联历史编辑摘要
       tags:
         - wiki
   /p1/wiki/unlock/subjects:

@@ -7,20 +7,15 @@ import * as fetcher from '@app/lib/types/fetcher.ts';
 import * as res from '@app/lib/types/res.ts';
 import { ghostUser } from '@app/lib/user/utils.ts';
 
-export type RevTypeValue = (typeof RevType)[keyof typeof RevType];
-
-type IRelationHistorySummary = Static<typeof RelationHistorySummary>;
-export const RelationHistorySummary = t.Object(
-  {
-    id: t.Integer(),
-    creator: t.Object({
-      username: t.String(),
-    }),
-    commitMessage: t.String(),
-    createdAt: t.Integer({ description: 'unix timestamp seconds' }),
-  },
-  { $id: 'RelationHistorySummary' },
-);
+type RevTypeValue =
+  | typeof RevType.subjectRelation
+  | typeof RevType.subjectCharacterRelation
+  | typeof RevType.subjectCastRelation
+  | typeof RevType.subjectPersonRelation
+  | typeof RevType.characterSubjectRelation
+  | typeof RevType.characterCastRelation
+  | typeof RevType.personCastRelation
+  | typeof RevType.personSubjectRelation;
 
 export function createRelationHistoryRoute(
   operationId: string,
@@ -45,7 +40,7 @@ export function createRelationHistoryRoute(
       }),
       security: [{ [Security.CookiesSession]: [], [Security.HTTPBearer]: [] }],
       response: {
-        200: res.Paged(res.Ref(RelationHistorySummary)),
+        200: res.Paged(res.Ref(res.RelationHistory)),
       },
     },
     handler: async ({
@@ -93,7 +88,7 @@ export function createRelationHistoryRoute(
             },
             createdAt: x.createdAt,
             commitMessage: x.revEditSummary,
-          }) satisfies IRelationHistorySummary,
+          }) satisfies res.IRelationHistory,
       );
 
       return { total: count, data: revisions };
